@@ -24,7 +24,7 @@ namespace DotNetDumper
 			
 			if (!File.Exists(pathToAssembly))
 			{
-				Console.WriteLine($"{ansiRed}X File \"{args[0]}\" doesn't exist.");
+				Console.WriteLine($"{ansiRed}X File {ansiGreen}\"{args[0]}\"{ansiRed} doesn't exist.{ansiReset}");
 				return;
 			}
 			
