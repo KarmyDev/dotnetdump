@@ -14,49 +14,77 @@ namespace DotNetDumper
 		private static string ansiYellow = "\u001b[33m";
 		private static string ansiBrightMagenta = "\u001b[35;1m";
 		
+		private static bool produceGraphviz;
+		
         static void Main(string[] args)
         {
 			if (args.Length < 1) return;
 			
 			if (Array.IndexOf(args, "-r") > -1 || Array.IndexOf(args, "--raw") > -1) ansiReset = ansiRed = ansiBrightRed = ansiGreen = ansiBrightBlue = ansiYellow = ansiBrightMagenta = "";
+			if (Array.IndexOf(args, "-g") > -1 || Array.IndexOf(args, "--graph") > -1) produceGraphviz = true;
 			
-			Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
+			if (!produceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
 			
 			string pathToAssembly = args[0];
 			
 			if (!File.Exists(pathToAssembly))
 			{
-				Console.WriteLine($"{ansiRed}X File {ansiGreen}\"{args[0]}\"{ansiRed} doesn't exist.{ansiReset}");
+				if (!produceGraphviz)Console.WriteLine($"{ansiRed}X File {ansiGreen}\"{args[0]}\"{ansiRed} doesn't exist.{ansiReset}");
 				return;
 			}
 			
 			try 
 			{
 				Assembly externalDll = Assembly.LoadFrom(pathToAssembly);
-				Console.WriteLine($"{ansiGreen}• {ansiReset}Loaded {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
+				if (!produceGraphviz)Console.WriteLine($"{ansiGreen}• {ansiReset}Loaded {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
 				
-				Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to obtain types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}...");
+				if (!produceGraphviz)Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to obtain types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}...");
 				try 
 				{
 					Type[] externalDllTypes = externalDll.GetTypes();
-					Console.WriteLine($"{ansiGreen}• {ansiReset}Successfully obtained types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
+					if (!produceGraphviz)Console.WriteLine($"{ansiGreen}• {ansiReset}Successfully obtained types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
 					
-					Console.WriteLine("\n");
+					if (!produceGraphviz)Console.WriteLine("\n");
+
+					string graphHeader = $"digraph G {{\n\t{{\n\t\tbase [label=\"{externalDll.GetName().Name}.dll\", shape=\"folder\"]\n";
+					string graphBody = "";
+					
 					foreach (Type type in externalDllTypes)
 					{
-						Console.WriteLine($"Found Type: {ansiBrightMagenta}{type.Name}{ansiReset}");
+						if (!produceGraphviz)Console.WriteLine($"Found Type: {ansiBrightMagenta}{type.Name}{ansiReset}");
+						if (produceGraphviz) 
+						{
+							graphHeader += $"\t\tt_{type.Name} [label=\"{type.Name}\", shape=component, color=darkgreen]\n";
+							graphBody += $"\tbase -> t_{type.Name} [dir=none]\n";
+						};
 						
 						foreach (MemberInfo member in type.GetMembers())
 						{
 							bool isMethod = member.MemberType == MemberTypes.Method;
 							string memberColor = isMethod ? ansiBrightBlue : ansiYellow;
-							string memberSuffix = isMethod ? "()" : "" ;
-							string memberPrefix = isMethod ? "Method" : "Member" ;
+							string memberSuffix = isMethod ? "()" : "";
+							string memberPrefix = isMethod ? "Method" : "Member";
 							
-							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor}{member.Name}{ansiReset}{memberSuffix}");
+							if (produceGraphviz) 
+							{
+								string memberGraphShape = isMethod ? "cds" : "signature" ;
+								string memberGraphColor = isMethod ? "blue" : "red" ;
+								graphHeader += $"\t\tm_{type.Name}_{member.Name.Replace('.', '_')} [label=\"{member.Name + memberSuffix}\", shape=\"{memberGraphShape}\", color={memberGraphColor}]\n";
+								graphBody += $"\tt_{type.Name} -> m_{type.Name}_{member.Name.Replace('.', '_')} [dir=none]\n";
+							}
+							if (!produceGraphviz)Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor}{member.Name}{ansiReset}{memberSuffix}");
 						}
+						
+						if (produceGraphviz) graphHeader += "\t}\n";
 					}
-					Console.WriteLine("\n");
+					if (!produceGraphviz)Console.WriteLine("\n");
+					
+					if (produceGraphviz) 
+					{
+						graphBody += "}";
+						Console.WriteLine(graphHeader + graphBody);
+					}
+					
 				}
 				catch (Exception ee)
 				{
