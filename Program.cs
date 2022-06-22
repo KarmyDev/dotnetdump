@@ -20,8 +20,14 @@ namespace DotNetDumper
 			
 			Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
 			
-			string workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string pathToAssembly = Path.Combine(workingDirectory, args[0]);
+			string pathToAssembly = args[0];
+			
+			if (!File.Exists(pathToAssembly))
+			{
+				string workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+				pathToAssembly = Path.Combine(workingDirectory, args[0]);
+			}
+			
 			try 
 			{
 				Assembly externalDll = Assembly.LoadFrom(pathToAssembly);
