@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 
@@ -50,14 +49,13 @@ namespace DotNetDumper
 					string graphHeader = $"digraph G {{\n\t{{\n\t\tbase [label=\"{externalDll.GetName().Name}.dll\", shape=\"folder\"]\n";
 					string graphBody = "";
 					
+					int typeCount = 0;
+					
 					foreach (Type type in externalDllTypes)
 					{
 						if (!produceGraphviz)Console.WriteLine($"Found Type: {ansiBrightMagenta}{type.Name}{ansiReset}");
-						if (produceGraphviz) 
-						{
-							graphHeader += $"\t\tt_{type.Name} [label=\"{type.Name}\", shape=component, color=darkgreen]\n";
-							graphBody += $"\tbase -> t_{type.Name} [dir=none]\n";
-						};
+						
+						string graphTableBuilder = "";
 						
 						foreach (MemberInfo member in type.GetMembers())
 						{
@@ -68,14 +66,21 @@ namespace DotNetDumper
 							
 							if (produceGraphviz) 
 							{
-								string memberGraphShape = isMethod ? "cds" : "signature" ;
-								string memberGraphColor = isMethod ? "blue" : "red" ;
-								graphHeader += $"\t\tm_{type.Name}_{member.Name.Replace(".", "_dot_").Replace("/", "_fs_").Replace("<", "_lsb_").Replace(">", "_rsb_").Replace("$", "_dollar_")} [label=\"{member.Name + memberSuffix}\", shape=\"{memberGraphShape}\", color={memberGraphColor}]\n";
-								graphBody += $"\tt_{type.Name} -> m_{type.Name}_{member.Name.Replace(".", "_dot_").Replace("/", "_fs_").Replace("<", "_lsb_").Replace(">", "_rsb_").Replace("$", "_dollar_")} [dir=none]\n";
+								string memberGraphColor = isMethod ? "#110ad1" : "#d1780a" ;
+								string memberEncodedName = System.Web.HttpUtility.HtmlEncode(member.Name);
+								graphTableBuilder += $"<FONT COLOR=\"{memberGraphColor}\">{memberEncodedName + memberSuffix}</FONT><BR/>";
 							}
 							if (!produceGraphviz)Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor}{member.Name}{ansiReset}{memberSuffix}");
 						}
 						
+						if (produceGraphviz) 
+						{
+							string typeEncodedName = System.Web.HttpUtility.HtmlEncode(type.Name);
+							graphHeader += $"\t\tt{typeCount} [label=<{{<FONT COLOR=\"#29470e\">{typeEncodedName}</FONT>|{graphTableBuilder}}}>, shape=record]\n";
+							graphBody += $"\tbase -> t{typeCount} [dir=none]\n";
+						};
+						
+						typeCount++;
 					}
 					if (!produceGraphviz) Console.WriteLine("\n");
 					
