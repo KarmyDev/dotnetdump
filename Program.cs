@@ -75,12 +75,12 @@ namespace DotNetDumper
 							if (!produceGraphviz)Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor}{member.Name}{ansiReset}{memberSuffix}");
 						}
 						
-						if (produceGraphviz) graphHeader += "\t}\n";
 					}
-					if (!produceGraphviz)Console.WriteLine("\n");
+					if (!produceGraphviz) Console.WriteLine("\n");
 					
 					if (produceGraphviz) 
 					{
+						graphHeader += "\t}\n";
 						graphBody += "}";
 						Console.WriteLine(graphHeader + graphBody);
 					}
