@@ -6,17 +6,19 @@ namespace DotNetDumper
 {
     class Program
     {
-		const string ansiReset = "\u001b[0m";
-		const string ansiRed = "\u001b[31m";
-		const string ansiBrightRed = "\u001b[31;1m";
-		const string ansiGreen = "\u001b[32m";
-		const string ansiBrightBlue = "\u001b[34;1m";
-		const string ansiYellow = "\u001b[33m";
-		const string ansiBrightMagenta = "\u001b[35;1m";
+		private static string ansiReset = "\u001b[0m";
+		private static string ansiRed = "\u001b[31m";
+		private static string ansiBrightRed = "\u001b[31;1m";
+		private static string ansiGreen = "\u001b[32m";
+		private static string ansiBrightBlue = "\u001b[34;1m";
+		private static string ansiYellow = "\u001b[33m";
+		private static string ansiBrightMagenta = "\u001b[35;1m";
 		
         static void Main(string[] args)
         {
 			if (args.Length < 1) return;
+			
+			if (Array.IndexOf(args, "-r") > -1 || Array.IndexOf(args, "--raw") > -1) ansiReset = ansiRed = ansiBrightRed = ansiGreen = ansiBrightBlue = ansiYellow = ansiBrightMagenta = "";
 			
 			Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
 			
