@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.IO;
 using System.Reflection;
 
@@ -69,8 +70,8 @@ namespace DotNetDumper
 							{
 								string memberGraphShape = isMethod ? "cds" : "signature" ;
 								string memberGraphColor = isMethod ? "blue" : "red" ;
-								graphHeader += $"\t\tm_{type.Name}_{member.Name.Replace('.', '_')} [label=\"{member.Name + memberSuffix}\", shape=\"{memberGraphShape}\", color={memberGraphColor}]\n";
-								graphBody += $"\tt_{type.Name} -> m_{type.Name}_{member.Name.Replace('.', '_')} [dir=none]\n";
+								graphHeader += $"\t\tm_{type.Name}_{member.Name.Replace(".", "_dot_").Replace("/", "_fs_").Replace("<", "_lsb_").Replace(">", "_rsb_").Replace("$", "_dollar_")} [label=\"{member.Name + memberSuffix}\", shape=\"{memberGraphShape}\", color={memberGraphColor}]\n";
+								graphBody += $"\tt_{type.Name} -> m_{type.Name}_{member.Name.Replace(".", "_dot_").Replace("/", "_fs_").Replace("<", "_lsb_").Replace(">", "_rsb_").Replace("$", "_dollar_")} [dir=none]\n";
 							}
 							if (!produceGraphviz)Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor}{member.Name}{ansiReset}{memberSuffix}");
 						}
