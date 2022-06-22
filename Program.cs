@@ -24,8 +24,8 @@ namespace DotNetDumper
 			
 			if (!File.Exists(pathToAssembly))
 			{
-				string workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-				pathToAssembly = Path.Combine(workingDirectory, args[0]);
+				Console.WriteLine($"{ansiRed}X File \"{args[0]}\" doesn't exist.");
+				return;
 			}
 			
 			try 
