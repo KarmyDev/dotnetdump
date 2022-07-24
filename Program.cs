@@ -15,7 +15,7 @@ namespace DotNetDumper
 		private static string ansiBrightMagenta = "\u001b[35;1m";
 		private static string ansiBackgroundFind = "\u001b[40m";
 		
-		private static bool produceGraphviz, findSpecificKeyword;
+		private static bool produceGraphviz, findSpecificKeyword, decompileData;
 		
         static void Main(string[] args)
         {
@@ -24,6 +24,7 @@ namespace DotNetDumper
 			if (Array.IndexOf(args, "-r") > -1 || Array.IndexOf(args, "--raw") > -1) ansiReset = ansiRed = ansiBrightRed = ansiGreen = ansiBrightBlue = ansiYellow = ansiBrightMagenta = "";
 			if (Array.IndexOf(args, "-g") > -1 || Array.IndexOf(args, "--graph") > -1) produceGraphviz = true;
 			if (Array.IndexOf(args, "-f") > -1 || Array.IndexOf(args, "--find") > -1) findSpecificKeyword = true;
+			if (Array.IndexOf(args, "-d") > -1 || Array.IndexOf(args, "--decompile") > -1) decompileData = true;
 			
 			if (!produceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
 			
@@ -66,6 +67,13 @@ namespace DotNetDumper
 						
 						displayClassContent = type.Name.ToLower().Contains(specificKeyword.ToLower());
 						
+						// DECOMPILE
+						if (displayClassContent && decompileData) 
+						{
+							Console.WriteLine("GUID: " + type.GUID.ToString());
+							Console.WriteLine("Token: " + type.GetMetadataToken());
+							Console.WriteLine("Hash: " + type.GetHashCode() + "\n");
+						}
 						string graphTableBuilder = "";
 						
 						foreach (MemberInfo member in type.GetMembers())
@@ -84,6 +92,12 @@ namespace DotNetDumper
 							
 							if (!produceGraphviz && !findSpecificKeyword || member.Name.ToLower().Contains(specificKeyword.ToLower()) || displayClassContent)
 							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor + (findSpecificKeyword && member.Name.ToLower().Contains(specificKeyword.ToLower()) ? ansiBackgroundFind : "")}{member.Name}{ansiReset}{memberSuffix}");
+						
+							if (displayClassContent && decompileData) 
+							{
+								Console.WriteLine("Token: " + member.GetMetadataToken());
+								Console.WriteLine("Hash: " + member.GetHashCode() + "\n");							
+							}
 						}
 						
 						if (produceGraphviz) 
