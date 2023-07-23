@@ -1,11 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using CommandLine;
 
 namespace DotNetDumper
 {
     class Program
     {
+		public class Options
+		{
+			[Value(0, Required = true, MetaName = "path", HelpText = "File to dump.")]
+			public string PathToAssembly {get; set;}
+			
+			[Option('r', "raw", Default = false, Required = false, HelpText = "Produce raw data. Containing ansi-colorless text.")]
+			public bool RawData {get; set;}
+			[Option('g', "graph", Default = false, Required = false, HelpText = "Produce graphviz representation of dumped data.")]
+			public bool ProduceGraphviz {get; set;}
+			[Option('f', "find", Default = "", Required = false, HelpText = "Find class/method inside of dumped data.")]
+			public string FindSpecificKeyword {get; set;}
+			[Option('m', "more", Default = false, Required = false, HelpText = "Get more in-depth informations out of class/method inside of dumped data.")]
+			public bool InDepthInfo {get; set;}
+		}
+		
 		private static string ansiReset = "\u001b[0m";
 		private static string ansiRed = "\u001b[31m";
 		private static string ansiBrightRed = "\u001b[31;1m";
@@ -15,43 +32,29 @@ namespace DotNetDumper
 		private static string ansiBrightMagenta = "\u001b[35;1m";
 		private static string ansiBackgroundFind = "\u001b[40m";
 		
-		private static bool produceGraphviz, findSpecificKeyword, decompileData;
-		
-        static void Main(string[] args)
-        {
-			if (args.Length < 1) return;
+		static void RunOptions(Options opts)
+		{
+			if (!opts.ProduceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{opts.PathToAssembly}\"{ansiReset}...");
 			
-			if (Array.IndexOf(args, "-r") > -1 || Array.IndexOf(args, "--raw") > -1) ansiReset = ansiRed = ansiBrightRed = ansiGreen = ansiBrightBlue = ansiYellow = ansiBrightMagenta = "";
-			if (Array.IndexOf(args, "-g") > -1 || Array.IndexOf(args, "--graph") > -1) produceGraphviz = true;
-			if (Array.IndexOf(args, "-f") > -1 || Array.IndexOf(args, "--find") > -1) findSpecificKeyword = true;
-			if (Array.IndexOf(args, "-d") > -1 || Array.IndexOf(args, "--decompile") > -1) decompileData = true;
-			
-			if (!produceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to load {ansiGreen}\"{args[0]}\"{ansiReset}...");
-			
-			string specificKeyword = "";
-			if (args.Length > 1) specificKeyword = args[2];
-			
-			string pathToAssembly = args[0];
-			
-			if (!File.Exists(pathToAssembly))
+			if (!File.Exists(opts.PathToAssembly))
 			{
-				if (!produceGraphviz) Console.WriteLine($"{ansiRed}X File {ansiGreen}\"{args[0]}\"{ansiRed} doesn't exist.{ansiReset}");
+				if (!opts.ProduceGraphviz) Console.WriteLine($"{ansiRed}X File {ansiGreen}\"{opts.PathToAssembly}\"{ansiRed} doesn't exist.{ansiReset}");
 				return;
 			}
 			
 			try 
 			{
-				Assembly externalDll = Assembly.LoadFrom(pathToAssembly);
-				if (!produceGraphviz) Console.WriteLine($"{ansiGreen}• {ansiReset}Loaded {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
+				Assembly externalDll = Assembly.LoadFrom(opts.PathToAssembly);
+				if (!opts.ProduceGraphviz) Console.WriteLine($"{ansiGreen}• {ansiReset}Loaded {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
 				
-				if (!produceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to obtain types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}...");
+				if (!opts.ProduceGraphviz) Console.WriteLine($"{ansiYellow}? {ansiReset}Attempting to obtain types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}...");
 				try 
 				{
 					Type[] externalDllTypes = externalDll.GetTypes();
-					if (!produceGraphviz)
+					if (!opts.ProduceGraphviz)
 					Console.WriteLine($"{ansiGreen}• {ansiReset}Successfully obtained types from {ansiGreen}\"{externalDll.FullName}\"{ansiReset}!");
 					
-					if (!produceGraphviz)
+					if (!opts.ProduceGraphviz)
 					Console.WriteLine("\n");
 
 					string graphHeader = $"digraph G {{\n\t{{\n\t\tbase [label=\"{externalDll.GetName().Name}.dll\", shape=\"folder\"]\n";
@@ -62,13 +65,13 @@ namespace DotNetDumper
 					
 					foreach (Type type in externalDllTypes)
 					{
-						if (!produceGraphviz && !findSpecificKeyword || type.Name.ToLower().Contains(specificKeyword.ToLower()))
-						Console.WriteLine($"Found Type: {ansiBrightMagenta + (findSpecificKeyword && type.Name.ToLower().Contains(specificKeyword.ToLower()) ? ansiBackgroundFind : "")}{type.Name}{ansiReset}");
+						if (!opts.ProduceGraphviz && string.IsNullOrEmpty(opts.FindSpecificKeyword) || type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()))
+						Console.WriteLine($"Found Type: {ansiBrightMagenta + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{type.Name}{ansiReset}");
 						
-						displayClassContent = type.Name.ToLower().Contains(specificKeyword.ToLower());
+						displayClassContent = type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower());
 						
 						// DECOMPILE
-						if (displayClassContent && decompileData) 
+						if (displayClassContent && opts.InDepthInfo) 
 						{
 							Console.WriteLine("GUID: " + type.GUID.ToString());
 							Console.WriteLine("Token: " + type.GetMetadataToken());
@@ -83,24 +86,29 @@ namespace DotNetDumper
 							string memberSuffix = isMethod ? "()" : "";
 							string memberPrefix = isMethod ? "Method" : "Member";
 							
-							if (produceGraphviz) 
+							if (opts.ProduceGraphviz) 
 							{
 								string memberGraphColor = isMethod ? "#110ad1" : "#d1780a" ;
 								string memberEncodedName = System.Web.HttpUtility.HtmlEncode(member.Name);
 								graphTableBuilder += $"<FONT COLOR=\"{memberGraphColor}\">{memberEncodedName + memberSuffix}</FONT><BR/>";
 							}
 							
-							if (!produceGraphviz && !findSpecificKeyword || member.Name.ToLower().Contains(specificKeyword.ToLower()) || displayClassContent)
-							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor + (findSpecificKeyword && member.Name.ToLower().Contains(specificKeyword.ToLower()) ? ansiBackgroundFind : "")}{member.Name}{ansiReset}{memberSuffix}");
+							if (
+								!opts.ProduceGraphviz 
+								&& string.IsNullOrEmpty(opts.FindSpecificKeyword) 
+								|| member.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) 
+								|| displayClassContent
+							)
+							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && member.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{member.Name}{ansiReset}{memberSuffix}");
 						
-							if (displayClassContent && decompileData) 
+							if (displayClassContent && opts.InDepthInfo) 
 							{
 								Console.WriteLine("Token: " + member.GetMetadataToken());
 								Console.WriteLine("Hash: " + member.GetHashCode() + "\n");							
 							}
 						}
 						
-						if (produceGraphviz) 
+						if (opts.ProduceGraphviz) 
 						{
 							string typeEncodedName = System.Web.HttpUtility.HtmlEncode(type.Name);
 							graphHeader += $"\t\tt{typeCount} [label=<{{<FONT COLOR=\"#29470e\">{typeEncodedName}</FONT>|{graphTableBuilder}}}>, shape=record]\n";
@@ -109,9 +117,9 @@ namespace DotNetDumper
 						
 						typeCount++;
 					}
-					if (!produceGraphviz && !findSpecificKeyword)  Console.WriteLine("\n");
+					if (!opts.ProduceGraphviz && string.IsNullOrEmpty(opts.FindSpecificKeyword)) Console.WriteLine("\n");
 					
-					if (produceGraphviz) 
+					if (opts.ProduceGraphviz) 
 					{
 						graphHeader += "\t}\n";
 						graphBody += "}";
@@ -127,11 +135,25 @@ namespace DotNetDumper
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine($"{ansiRed}X Failed to load {ansiGreen}\"{args[0]}\"{ansiRed}.{ansiReset}");
+				Console.WriteLine($"{ansiRed}X Failed to load {ansiGreen}\"{opts.PathToAssembly}\"{ansiRed}.{ansiReset}");
 				Console.WriteLine($"\n  {ansiRed}Exception: {ansiBrightRed}{e}{ansiReset}");
 				
 			}
-        }
-    }
+		}
+		
+		static void HandleParseError(IEnumerable<Error> errs)
+		{
+			foreach (Error error in errs)
+			{
+				Console.WriteLine($"{ansiRed}(X) {error}");
+			}
+		}
+		
+        static void Main(string[] args)
+        {
+			Parser.Default.ParseArguments<Options>(args).WithParsed(RunOptions).WithNotParsed(HandleParseError);
+		}
+		
+	}
 }
 
