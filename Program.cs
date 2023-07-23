@@ -66,11 +66,11 @@ namespace DotNetDumper
 					foreach (Type type in externalDllTypes)
 					{
 						if (!opts.ProduceGraphviz && string.IsNullOrEmpty(opts.FindSpecificKeyword) || type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()))
-						Console.WriteLine($"Found Type: {ansiBrightMagenta + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{type.Name}{ansiReset}");
+						Console.WriteLine($"Found Class: {ansiBrightMagenta + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{type.Name}{ansiReset}");
 						
 						displayClassContent = type.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower());
 						
-						// DECOMPILE
+						// IN-DEPTH
 						if (displayClassContent && opts.InDepthInfo) 
 						{
 							Console.WriteLine("GUID: " + type.GUID.ToString());
@@ -83,7 +83,23 @@ namespace DotNetDumper
 						{
 							bool isMethod = member.MemberType == MemberTypes.Method;
 							string memberColor = isMethod ? ansiBrightBlue : ansiYellow;
-							string memberSuffix = isMethod ? "()" : "";
+							
+							string parameters = "";
+							string returnType = "";
+							if (isMethod)
+							{
+								ParameterInfo[] ps = ((MethodInfo) member).GetParameters();
+								
+								for (int i = 0; i < ps.Length; i++)
+								{
+									parameters += $"{ansiRed}{ps[i].ParameterType.Name}{ansiReset} {ps[i].Name}";
+									if (i != ps.Length - 1) parameters += ", ";
+								}
+								
+								returnType = $"{ansiYellow} -> {ansiRed}{((MethodInfo)member).ReturnType.Name}{ansiReset}";
+							}
+							
+							string memberSuffix = isMethod ? $"({parameters})" : "";
 							string memberPrefix = isMethod ? "Method" : "Member";
 							
 							if (opts.ProduceGraphviz) 
@@ -99,7 +115,7 @@ namespace DotNetDumper
 								|| member.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) 
 								|| displayClassContent
 							)
-							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && member.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{member.Name}{ansiReset}{memberSuffix}");
+							Console.WriteLine($"{ansiYellow}-- {ansiReset}Found {memberPrefix}: {memberColor + (!string.IsNullOrEmpty(opts.FindSpecificKeyword) && member.Name.ToLower().Contains(opts.FindSpecificKeyword.ToLower()) ? ansiBackgroundFind : "")}{member.Name}{ansiReset}{memberSuffix}{returnType}");
 						
 							if (displayClassContent && opts.InDepthInfo) 
 							{
